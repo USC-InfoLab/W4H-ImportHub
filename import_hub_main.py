@@ -69,79 +69,85 @@ def populate_db(df: pd.DataFrame, db_name: str, mappings: dict, config_path: str
     st.write(mappings)
     populate_tables(df, db_name, mappings, config_path)
     
-    
 
-config = load_config(config_file=CONFIG_FILE)
-config_path = CONFIG_FILE
+def main():
+    """Main function for the streamlit app"""
+    # Load the config
+    config = load_config(config_file=CONFIG_FILE)
+    config_path = CONFIG_FILE
 
 
-st.title("W4H Import Hub")
+    st.title("W4H Import Hub")
 
-selected_db = None
+    selected_db = None
 
-# Choose between existing or new database
-db_selection_options = ["Choose existing W4H database instance", "Create new W4H database instance"]
-database_option = st.radio(
-    "Select an option",
-    db_selection_options
-)
+    # Choose between existing or new database
+    db_selection_options = ["Choose existing W4H database instance", "Create new W4H database instance"]
+    database_option = st.radio(
+        "Select an option",
+        db_selection_options
+    )
 
-# Handling the chosen option
-if database_option == db_selection_options[0]:
-    # `get_existing_databases()` retrieves the list of existing databases.
-    existing_databases = get_existing_databases(config_path)  # This function needs to be implemented.
-    
-    selected_db = st.selectbox("**Select an existing database**", existing_databases)
-    
+    # Handling the chosen option
+    if database_option == db_selection_options[0]:
+        # `get_existing_databases()` retrieves the list of existing databases.
+        existing_databases = get_existing_databases(config_path)  # This function needs to be implemented.
         
-elif database_option == db_selection_options[1]:
-    new_db_name = st.text_input("Enter new w4h database instance name")
-    if st.button("Create"):
-        # Here, implement logic to create the new database with the name new_db_name.
-        create_w4h_instance(new_db_name, config_path)  # This function needs to be implemented.
-        st.success(f"Database '{new_db_name}' created!")
-        selected_db = new_db_name
+        selected_db = st.selectbox("**Select an existing database**", existing_databases)
         
+            
+    elif database_option == db_selection_options[1]:
+        new_db_name = st.text_input("Enter new w4h database instance name")
+        if st.button("Create"):
+            # Here, implement logic to create the new database with the name new_db_name.
+            create_w4h_instance(new_db_name, config_path)  # This function needs to be implemented.
+            st.success(f"Database '{new_db_name}' created!")
+            selected_db = new_db_name
+            
 
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 
-if uploaded_file:
-    st.success("File uploaded!")
-    df = pd.read_csv(uploaded_file)
-    st.write("Columns in your CSV:")
-    st.write(df.columns)
+    if uploaded_file:
+        st.success("File uploaded!")
+        df = pd.read_csv(uploaded_file)
+        st.write("Columns in your CSV:")
+        st.write(df.columns)
 
-    # Map columns
-    st.subheader("Mapping")
+        # Map columns
+        st.subheader("Mapping")
 
-    # Default selections based on column name similarity
-    default_timestamp = find_closest_name(df.columns, 'time timestamp date start_time end_time')
-    default_user_id = find_closest_name(df.columns, 'user id email')
+        # Default selections based on column name similarity
+        default_timestamp = find_closest_name(df.columns, 'time timestamp date start_time end_time')
+        default_user_id = find_closest_name(df.columns, 'user id email')
 
-    timestamp_col = st.selectbox("**Select Timestamp Column**", df.columns, index=df.columns.get_loc(default_timestamp))
-    user_id_col = st.selectbox("**Select User ID Column**", df.columns, index=df.columns.get_loc(default_user_id))
+        timestamp_col = st.selectbox("**Select Timestamp Column**", df.columns, index=df.columns.get_loc(default_timestamp))
+        user_id_col = st.selectbox("**Select User ID Column**", df.columns, index=df.columns.get_loc(default_user_id))
 
-    # Foldable block for optional mappings
-    mappings = {
-        config['mapping']['columns']['timestamp']: timestamp_col,
-        config["mapping"]['columns']['user_id']: user_id_col,
-    }
-    table_mappings = {}
-    with st.expander("**Map Features to W4H Tables**", expanded=True):
-        st.write("Map your CSV columns to corresponding W4H tables.")
-        
-        choices = ["None"] + list(df.columns)
-        for target_table_name in config['mapping']['tables']['time_series'] + config['mapping']['tables']['geo']:
-            target_table_label = ' '.join([label.capitalize() for label in target_table_name.replace('_', ' ').split()])
-            st.subheader(target_table_label)
-            def_choice = find_closest_name(choices, target_table_label)
-            mapped_col = st.selectbox("Select Corresponding Column", choices, 
-                                      key=target_table_name, index=choices.index(def_choice))
-            table_mappings[target_table_name] = mapped_col if mapped_col != "None" else None
+        # Foldable block for optional mappings
+        mappings = {
+            config['mapping']['columns']['timestamp']: timestamp_col,
+            config["mapping"]['columns']['user_id']: user_id_col,
+        }
+        table_mappings = {}
+        with st.expander("**Map Features to W4H Tables**", expanded=True):
+            st.write("Map your CSV columns to corresponding W4H tables.")
+            
+            choices = ["None"] + list(df.columns)
+            for target_table_name in config['mapping']['tables']['time_series'] + config['mapping']['tables']['geo']:
+                target_table_label = ' '.join([label.capitalize() for label in target_table_name.replace('_', ' ').split()])
+                st.subheader(target_table_label)
+                def_choice = find_closest_name(choices, target_table_label)
+                mapped_col = st.selectbox("Select Corresponding Column", choices, 
+                                        key=target_table_name, index=choices.index(def_choice))
+                table_mappings[target_table_name] = mapped_col if mapped_col != "None" else None
 
-    # Once mappings are set, allow the user to populate the database
-    if st.button("Populate Database"):
-        mappings = {**mappings, **table_mappings}
+        # Once mappings are set, allow the user to populate the database
+        if st.button("Populate Database"):
+            mappings = {**mappings, **table_mappings}
 
-        populate_db(df, selected_db, mappings, config_path)
-        st.success("Database populated!")
+            populate_db(df, selected_db, mappings, config_path)
+            st.success("Database populated!")
+
+
+if __name__ == "__main__":
+    main()
