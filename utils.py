@@ -1,8 +1,9 @@
 import yaml
+import sqlalchemy
 from sqlalchemy import create_engine
 
 
-def load_config(config_file) -> dict:
+def load_config(config_file: str) -> dict:
     """Read the YAML config file
 
     Args:
@@ -15,7 +16,17 @@ def load_config(config_file) -> dict:
             print(exc)
             
             
-def get_db_engine(config_file, db_name=None):
+def get_db_engine(config_file: str, db_name=None) -> sqlalchemy.engine.base.Engine:
+    """Create a SQLAlchemy Engine instance based on the config file
+
+    Args:
+        config_file (str): Path to the config file
+        db_name (str, optional): Name of the database to connect to. Defaults to None.
+
+    Returns:
+        sqlalchemy.engine.base.Engine: SQLAlchemy Engine instance for the database
+
+    """
     # load the configurations
     config = load_config(config_file=config_file)
     # Database connection configuration

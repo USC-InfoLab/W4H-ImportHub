@@ -11,14 +11,20 @@ from geoalchemy2 import Geometry
 from utils import load_config, get_db_engine
 
 
-def create_tables(db_name, config_file='config.yaml'):
+def create_tables(db_name: str, config_file='config.yaml'):
+    """Create the W4H tables in the database with the given name based on the config file
+
+    Args:
+        db_name (str): Name of the database to create the tables in
+        config_file (str, optional): Path to the config file. Defaults to 'config.yaml'.
+    """
     metadata = MetaData()
     config = load_config(config_file=config_file)
     db_engine = get_db_engine(config_file, db_name=db_name)
 
     columns_config = config["mapping"]["columns"]
 
-    # Create user table dynamically
+    # Create the user table
     user_table_config = config["mapping"]["tables"]["user_table"]
     user_columns = [eval(f'Column("{col_name}", {col_dtype}, primary_key={col_name == columns_config["user_id"]})') for col_name, col_dtype in user_table_config["columns"].items()]  # Convert string to actual SQLAlchemy type
     user_table = Table(user_table_config["name"], metadata, *user_columns)
@@ -32,7 +38,7 @@ def create_tables(db_name, config_file='config.yaml'):
             Column(columns_config["value"], REAL),
         )
     
-    # Create geo table
+    # Create geo tables
     for table_name in config["mapping"]["tables"]["geo"]:
         table = Table(table_name, metadata,
             Column(columns_config["user_id"], ForeignKey(user_table_config["name"] + '.' + columns_config["user_id"]), primary_key=True),
@@ -45,10 +51,16 @@ def create_tables(db_name, config_file='config.yaml'):
     
         
         
-def create_w4h_instance(db_name, config_file='config.yaml'):
+def create_w4h_instance(db_name: str, config_file='config.yaml'):
+    """Create a new W4H database instance with the given name and initialize the tables based on the config file
+
+    Args:
+        db_name (str): Name of the database to create
+        config_file (str, optional): Path to the config file. Defaults to 'config.yaml'.
+    """
     db_engine_tmp = get_db_engine(config_file)
     logger.info('Database engine created!')
-    # Execute the SQL command to create the database
+    # Execute the SQL command to create the database if it doesn't exist
     if not database_exists(f'{db_engine_tmp.url}{db_name}'):
         create_database(f'{db_engine_tmp.url}{db_name}')
         logger.success(f"Database {db_name} created!")
@@ -58,16 +70,26 @@ def create_w4h_instance(db_name, config_file='config.yaml'):
         db_engine_tmp.dispose()
         return
     db_engine = get_db_engine(config_file, db_name=db_name)
+    # Enable PostGIS extension
     with db_engine.connect() as connection:
         connection.execute(text(f"CREATE EXTENSION postgis;"))
         logger.success(f"PostGIS extension enabled for {db_name}!")
         connection.commit()
     db_engine.dispose()
+    # Create the W4H tables
     create_tables(config_file=config_file, db_name=db_name)
     logger.success(f"W4H tables initialized!")
     
     
-def get_existing_databases(config_file='config.yaml'):
+def get_existing_databases(config_file='config.yaml') -> list:
+    """Get a list of all existing databases
+
+    Args:
+        config_file (str, optional): Path to the config file. Defaults to 'config.yaml'.
+
+    Returns:
+        list: List of all existing databases (strings)
+    """
     config = load_config(config_file=config_file)
     db_engine = get_db_engine(config_file)
     with db_engine.connect() as connection:
@@ -77,7 +99,16 @@ def get_existing_databases(config_file='config.yaml'):
     return databases
 
 
-def populate_tables(df, db_name, mappings, config_path='config.yaml'):
+def populate_tables(df: pd.DataFrame, db_name: str, mappings: dict, config_path='config.yaml'):
+    """Populate the W4H tables in the given database with the data from the given dataframe based on 
+    the mappings between the CSV columns and the database tables.
+
+    Args:
+        df (pd.DataFrame): Dataframe containing the data to be inserted into the database
+        db_name (str): Name of the database to insert the data into
+        mappings (dict): Dictionary containing the mappings between the CSV columns and the database tables
+        config_path (str, optional): Path to the config file. Defaults to 'config.yaml'.
+    """
     # Load the config
     config = load_config(config_path)
     
@@ -138,12 +169,3 @@ def populate_tables(df, db_name, mappings, config_path='config.yaml'):
     session.commit()
     session.close()
     engine.dispose()
-
-        
-        
-def main():
-    create_w4h_instance('pop_test')
-    
-    
-if __name__ == '__main__':
-    main()

@@ -11,10 +11,15 @@ from w4h_db_utils import create_w4h_instance, get_existing_databases, populate_t
 
 CONFIG_FILE = 'config.yaml'
 
-def preprocess_string(s):
-    """
-    Preprocess the string by converting to lowercase, replacing underscores with spaces,
+def preprocess_string(s: str) -> str:
+    """Preprocess the string by converting to lowercase, replacing underscores with spaces,
     tokenizing, and then reconstructing without special characters.
+    
+    Args:
+        s (str): String to preprocess
+        
+    Returns:
+        str: Preprocessed string
     """
     # Convert to lowercase and replace underscores with spaces
     s = s.lower().replace('_', ' ')
@@ -26,9 +31,16 @@ def preprocess_string(s):
     return ' '.join(tokens)
 
 
-def find_closest_name(col_names, targets):
-    """
-    Find the closest column name based on substrings.
+def find_closest_name(col_names: list, targets: str) -> str:
+    """Find the closest column name based on substrings.
+    
+    Args:
+        col_names (list): List of column names to search through
+        targets (str): String containing the target column names    
+        
+    Returns:
+        str: Closest column name
+    
     """
     score_threshold = 60
     def_choice = col_names[0]  # default
@@ -44,7 +56,15 @@ def find_closest_name(col_names, targets):
 
 
 
-def populate_db(df, db_name, mappings, config_path):
+def populate_db(df: pd.DataFrame, db_name: str, mappings: dict, config_path: str):
+    """Populate the database with the given dataframe.
+
+    Args:
+        df (pd.DataFrame): Dataframe containing the data to be inserted into the database
+        db_name (str): Name of the database to insert the data into
+        mappings (dict): Dictionary containing the mappings between the CSV columns and the database tables
+        config_path (str, optional): Path to the config file. Defaults to 'config.yaml'.
+    """
     st.write("Populating database...")
     st.write(mappings)
     populate_tables(df, db_name, mappings, config_path)
