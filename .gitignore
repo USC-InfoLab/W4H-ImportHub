@@ -1,6 +1,9 @@
 # Don't push datasets
 datasets/
 
+# Don't push credentials
+./config.yaml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
