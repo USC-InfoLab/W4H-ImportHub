@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>w4h_db_utils &mdash; W4H ImportHub 0.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            W4H ImportHub
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Get Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">W4H-ImportHub</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">W4H ImportHub</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">w4h_db_utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for w4h_db_utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">from</span> <span class="nn">loguru</span> <span class="kn">import</span> <span class="n">logger</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">MetaData</span><span class="p">,</span> <span class="n">Table</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">,</span> <span class="n">DateTime</span><span class="p">,</span> <span class="n">REAL</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">sessionmaker</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy_utils</span> <span class="kn">import</span> <span class="n">database_exists</span><span class="p">,</span> <span class="n">create_database</span>
+
+
+<span class="kn">from</span> <span class="nn">geoalchemy2</span> <span class="kn">import</span> <span class="n">Geometry</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">load_config</span><span class="p">,</span> <span class="n">get_db_engine</span>
+
+
+<div class="viewcode-block" id="create_tables"><a class="viewcode-back" href="../w4h_db_utils.html#w4h_db_utils.create_tables">[docs]</a><span class="k">def</span> <span class="nf">create_tables</span><span class="p">(</span><span class="n">db_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config_file</span><span class="o">=</span><span class="s1">&#39;config.yaml&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create the W4H tables in the database with the given name based on the config file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        db_name (str): Name of the database to create the tables in</span>
+<span class="sd">        config_file (str, optional): Path to the config file. Defaults to &#39;config.yaml&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">MetaData</span><span class="p">()</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="n">config_file</span><span class="p">)</span>
+    <span class="n">db_engine</span> <span class="o">=</span> <span class="n">get_db_engine</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="n">db_name</span><span class="o">=</span><span class="n">db_name</span><span class="p">)</span>
+
+    <span class="n">columns_config</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">][</span><span class="s2">&quot;columns&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Create the user table</span>
+    <span class="n">user_table_config</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">][</span><span class="s2">&quot;tables&quot;</span><span class="p">][</span><span class="s2">&quot;user_table&quot;</span><span class="p">]</span>
+    <span class="n">user_columns</span> <span class="o">=</span> <span class="p">[</span><span class="nb">eval</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Column(&quot;</span><span class="si">{</span><span class="n">col_name</span><span class="si">}</span><span class="s1">&quot;, </span><span class="si">{</span><span class="n">col_dtype</span><span class="si">}</span><span class="s1">, primary_key=</span><span class="si">{</span><span class="n">col_name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">columns_config</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">col_dtype</span> <span class="ow">in</span> <span class="n">user_table_config</span><span class="p">[</span><span class="s2">&quot;columns&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>  <span class="c1"># Convert string to actual SQLAlchemy type</span>
+    <span class="n">user_table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">user_table_config</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span> <span class="n">metadata</span><span class="p">,</span> <span class="o">*</span><span class="n">user_columns</span><span class="p">)</span>
+    
+    
+    <span class="c1"># Create time series tables</span>
+    <span class="k">for</span> <span class="n">table_name</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">][</span><span class="s2">&quot;tables&quot;</span><span class="p">][</span><span class="s2">&quot;time_series&quot;</span><span class="p">]:</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">table_name</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span>
+            <span class="n">Column</span><span class="p">(</span><span class="n">columns_config</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">],</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="n">user_table_config</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span class="n">columns_config</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">Column</span><span class="p">(</span><span class="n">columns_config</span><span class="p">[</span><span class="s2">&quot;timestamp&quot;</span><span class="p">],</span> <span class="n">DateTime</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">Column</span><span class="p">(</span><span class="n">columns_config</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">],</span> <span class="n">REAL</span><span class="p">),</span>
+        <span class="p">)</span>
+    
+    <span class="c1"># Create geo tables</span>
+    <span class="k">for</span> <span class="n">table_name</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">][</span><span class="s2">&quot;tables&quot;</span><span class="p">][</span><span class="s2">&quot;geo&quot;</span><span class="p">]:</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">table_name</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span>
+            <span class="n">Column</span><span class="p">(</span><span class="n">columns_config</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">],</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="n">user_table_config</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span class="n">columns_config</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">Column</span><span class="p">(</span><span class="n">columns_config</span><span class="p">[</span><span class="s2">&quot;timestamp&quot;</span><span class="p">],</span> <span class="n">DateTime</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">Column</span><span class="p">(</span><span class="n">columns_config</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">],</span> <span class="n">Geometry</span><span class="p">(</span><span class="s1">&#39;POINT&#39;</span><span class="p">))</span>
+        <span class="p">)</span>
+    
+    <span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">db_engine</span><span class="p">)</span>
+    <span class="n">db_engine</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span></div>
+    
+        
+        
+<div class="viewcode-block" id="create_w4h_instance"><a class="viewcode-back" href="../w4h_db_utils.html#w4h_db_utils.create_w4h_instance">[docs]</a><span class="k">def</span> <span class="nf">create_w4h_instance</span><span class="p">(</span><span class="n">db_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config_file</span><span class="o">=</span><span class="s1">&#39;config.yaml&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new W4H database instance with the given name and initialize the tables based on the config file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        db_name (str): Name of the database to create</span>
+<span class="sd">        config_file (str, optional): Path to the config file. Defaults to &#39;config.yaml&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">db_engine_tmp</span> <span class="o">=</span> <span class="n">get_db_engine</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Database engine created!&#39;</span><span class="p">)</span>
+    <span class="c1"># Execute the SQL command to create the database if it doesn&#39;t exist</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">database_exists</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">db_engine_tmp</span><span class="o">.</span><span class="n">url</span><span class="si">}{</span><span class="n">db_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">):</span>
+        <span class="n">create_database</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">db_engine_tmp</span><span class="o">.</span><span class="n">url</span><span class="si">}{</span><span class="n">db_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Database </span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s2"> created!&quot;</span><span class="p">)</span>
+        <span class="n">db_engine_tmp</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Database </span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s2"> already exists!&quot;</span><span class="p">)</span>
+        <span class="n">db_engine_tmp</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
+        <span class="k">return</span>
+    <span class="n">db_engine</span> <span class="o">=</span> <span class="n">get_db_engine</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="n">db_name</span><span class="o">=</span><span class="n">db_name</span><span class="p">)</span>
+    <span class="c1"># Enable PostGIS extension</span>
+    <span class="k">with</span> <span class="n">db_engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">connection</span><span class="p">:</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">text</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CREATE EXTENSION postgis;&quot;</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PostGIS extension enabled for </span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s2">!&quot;</span><span class="p">)</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">db_engine</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
+    <span class="c1"># Create the W4H tables</span>
+    <span class="n">create_tables</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="n">config_file</span><span class="p">,</span> <span class="n">db_name</span><span class="o">=</span><span class="n">db_name</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;W4H tables initialized!&quot;</span><span class="p">)</span></div>
+    
+    
+<div class="viewcode-block" id="get_existing_databases"><a class="viewcode-back" href="../w4h_db_utils.html#w4h_db_utils.get_existing_databases">[docs]</a><span class="k">def</span> <span class="nf">get_existing_databases</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="s1">&#39;config.yaml&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get a list of all existing databases</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config_file (str, optional): Path to the config file. Defaults to &#39;config.yaml&#39;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list: List of all existing databases (strings)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="n">config_file</span><span class="p">)</span>
+    <span class="n">db_engine</span> <span class="o">=</span> <span class="n">get_db_engine</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">db_engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">connection</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">text</span><span class="p">(</span><span class="s2">&quot;SELECT datname FROM pg_database WHERE datistemplate = false;&quot;</span><span class="p">))</span>
+        <span class="n">databases</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">result</span><span class="p">]</span>
+    <span class="n">db_engine</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">databases</span></div>
+
+
+<div class="viewcode-block" id="populate_tables"><a class="viewcode-back" href="../w4h_db_utils.html#w4h_db_utils.populate_tables">[docs]</a><span class="k">def</span> <span class="nf">populate_tables</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">db_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mappings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">config_path</span><span class="o">=</span><span class="s1">&#39;config.yaml&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Populate the W4H tables in the given database with the data from the given dataframe based on </span>
+<span class="sd">    the mappings between the CSV columns and the database tables.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df (pd.DataFrame): Dataframe containing the data to be inserted into the database</span>
+<span class="sd">        db_name (str): Name of the database to insert the data into</span>
+<span class="sd">        mappings (dict): Dictionary containing the mappings between the CSV columns and the database tables</span>
+<span class="sd">        config_path (str, optional): Path to the config file. Defaults to &#39;config.yaml&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Load the config</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span>
+    
+    <span class="c1"># Extract default column names from the config</span>
+    <span class="n">default_user_id</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;mapping&#39;</span><span class="p">][</span><span class="s1">&#39;columns&#39;</span><span class="p">][</span><span class="s1">&#39;user_id&#39;</span><span class="p">]</span>
+    <span class="n">default_timestamp</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;mapping&#39;</span><span class="p">][</span><span class="s1">&#39;columns&#39;</span><span class="p">][</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span>
+    <span class="n">default_value</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;mapping&#39;</span><span class="p">][</span><span class="s1">&#39;columns&#39;</span><span class="p">][</span><span class="s1">&#39;value&#39;</span><span class="p">]</span>
+    <span class="n">user_table_name</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;mapping&#39;</span><span class="p">][</span><span class="s1">&#39;tables&#39;</span><span class="p">][</span><span class="s1">&#39;user_table&#39;</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Create a session</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">get_db_engine</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="n">db_name</span><span class="o">=</span><span class="n">db_name</span><span class="p">)</span>
+    <span class="n">Session</span> <span class="o">=</span> <span class="n">sessionmaker</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+    
+    <span class="c1"># Ensure all unique users from the dataframe exist in the user table</span>
+    <span class="n">unique_users</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">mappings</span><span class="p">[</span><span class="n">default_user_id</span><span class="p">]]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">existing_users</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Table</span><span class="p">(</span><span class="n">user_table_name</span><span class="p">,</span> <span class="n">MetaData</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">),</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">default_user_id</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">existing_users</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">existing_users</span><span class="p">]</span>
+
+    <span class="c1"># Identify users that are not yet in the database</span>
+    <span class="n">new_users</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">unique_users</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">existing_users</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">new_users</span><span class="p">:</span>
+        <span class="c1"># Convert the set of new users into a DataFrame</span>
+        <span class="n">all_new_users</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">default_user_id</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">new_users</span><span class="p">)})</span>
+        
+        <span class="c1"># Use to_sql to insert all new users into the user table</span>
+        <span class="n">all_new_users</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">user_table_name</span><span class="p">,</span> <span class="n">engine</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;append&#39;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Get the subset of mappings that doesn&#39;t include default_user_id and default_timestamp</span>
+    <span class="n">table_mappings</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">mappings</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">default_user_id</span><span class="p">,</span> <span class="n">default_timestamp</span><span class="p">]}</span>
+    
+    <span class="c1"># Loop through each table in table_mappings</span>
+    <span class="k">for</span> <span class="n">table_name</span><span class="p">,</span> <span class="n">csv_column</span> <span class="ow">in</span> <span class="n">table_mappings</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="c1"># Check if the mapping is not NULL and exists in the df</span>
+        <span class="k">if</span> <span class="n">csv_column</span> <span class="ow">and</span> <span class="n">csv_column</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            
+            <span class="c1"># Ensure that the dataframe columns match the user_id, timestamp, and value from your CSV</span>
+            <span class="n">columns_to_insert</span> <span class="o">=</span> <span class="p">[</span><span class="n">mappings</span><span class="p">[</span><span class="n">default_user_id</span><span class="p">],</span> <span class="n">mappings</span><span class="p">[</span><span class="n">default_timestamp</span><span class="p">],</span> <span class="n">csv_column</span><span class="p">]</span>
+            
+            <span class="n">subset_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">columns_to_insert</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            
+            <span class="c1"># Rename columns to match the table&#39;s column names using the defaults from config</span>
+            <span class="n">subset_df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">default_user_id</span><span class="p">,</span> <span class="n">default_timestamp</span><span class="p">,</span> <span class="n">default_value</span><span class="p">]</span>
+            
+            <span class="c1"># dropping duplicate user_id and timestamp</span>
+            <span class="n">subset_df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="n">default_user_id</span><span class="p">,</span> <span class="n">default_timestamp</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># subset_df = subset_df.groupby([default_user_id, default_timestamp]).mean().reset_index()</span>
+            
+            <span class="c1"># handling geometry data</span>
+            <span class="k">if</span> <span class="n">table_name</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">][</span><span class="s2">&quot;tables&quot;</span><span class="p">][</span><span class="s2">&quot;geo&quot;</span><span class="p">]:</span>
+                <span class="n">subset_df</span><span class="p">[</span><span class="n">default_value</span><span class="p">]</span> <span class="o">=</span> <span class="n">subset_df</span><span class="p">[</span><span class="n">default_value</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;POINT</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+            
+            <span class="c1"># Insert data into the table</span>
+            <span class="n">subset_df</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">table_name</span><span class="p">,</span> <span class="n">engine</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;append&#39;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Commit the remaining changes and close the session</span>
+    <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">session</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">engine</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Arash Hajisafi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

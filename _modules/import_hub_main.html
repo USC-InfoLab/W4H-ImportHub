@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>import_hub_main &mdash; W4H ImportHub 0.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            W4H ImportHub
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Get Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">W4H-ImportHub</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">W4H ImportHub</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">import_hub_main</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for import_hub_main</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">streamlit</span> <span class="k">as</span> <span class="nn">st</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">difflib</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">fuzzywuzzy</span> <span class="kn">import</span> <span class="n">process</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">load_config</span>
+
+<span class="kn">from</span> <span class="nn">w4h_db_utils</span> <span class="kn">import</span> <span class="n">create_w4h_instance</span><span class="p">,</span> <span class="n">get_existing_databases</span><span class="p">,</span> <span class="n">populate_tables</span>
+
+
+<span class="n">CONFIG_FILE</span> <span class="o">=</span> <span class="s1">&#39;config.yaml&#39;</span>
+
+<div class="viewcode-block" id="preprocess_string"><a class="viewcode-back" href="../import_hub_main.html#import_hub_main.preprocess_string">[docs]</a><span class="k">def</span> <span class="nf">preprocess_string</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Preprocess the string by converting to lowercase, replacing underscores with spaces,</span>
+<span class="sd">    tokenizing, and then reconstructing without special characters.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        s (str): String to preprocess</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        str: Preprocessed string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert to lowercase and replace underscores with spaces</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Tokenize the string and remove special characters</span>
+    <span class="n">tokens</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\b\w+\b&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+    
+    <span class="c1"># Reconstruct the string with spaces</span>
+    <span class="k">return</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="find_closest_name"><a class="viewcode-back" href="../import_hub_main.html#import_hub_main.find_closest_name">[docs]</a><span class="k">def</span> <span class="nf">find_closest_name</span><span class="p">(</span><span class="n">col_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">targets</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the closest column name based on substrings.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        col_names (list): List of column names to search through</span>
+<span class="sd">        targets (str): String containing the target column names    </span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        str: Closest column name</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">score_threshold</span> <span class="o">=</span> <span class="mi">60</span>
+    <span class="n">def_choice</span> <span class="o">=</span> <span class="n">col_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># default</span>
+    
+    <span class="c1"># Preprocess column names</span>
+    <span class="n">preprocessed_to_original</span> <span class="o">=</span> <span class="p">{</span><span class="n">preprocess_string</span><span class="p">(</span><span class="n">col</span><span class="p">):</span> <span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">col_names</span><span class="p">}</span>
+    <span class="n">preprocessed_col_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">preprocessed_to_original</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    
+    <span class="c1"># Extract best match using fuzzywuzzy</span>
+    <span class="n">match</span><span class="p">,</span> <span class="n">score</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">extractOne</span><span class="p">(</span><span class="n">preprocess_string</span><span class="p">(</span><span class="n">targets</span><span class="p">),</span> <span class="n">preprocessed_col_names</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">preprocessed_to_original</span><span class="p">[</span><span class="n">match</span><span class="p">]</span> <span class="k">if</span> <span class="n">score</span> <span class="o">&gt;</span> <span class="n">score_threshold</span> <span class="k">else</span> <span class="n">def_choice</span></div>
+
+
+
+<div class="viewcode-block" id="populate_db"><a class="viewcode-back" href="../import_hub_main.html#import_hub_main.populate_db">[docs]</a><span class="k">def</span> <span class="nf">populate_db</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">db_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mappings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Populate the database with the given dataframe.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df (pd.DataFrame): Dataframe containing the data to be inserted into the database</span>
+<span class="sd">        db_name (str): Name of the database to insert the data into</span>
+<span class="sd">        mappings (dict): Dictionary containing the mappings between the CSV columns and the database tables</span>
+<span class="sd">        config_path (str, optional): Path to the config file. Defaults to &#39;config.yaml&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Populating database...&quot;</span><span class="p">)</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">mappings</span><span class="p">)</span>
+    <span class="n">populate_tables</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">mappings</span><span class="p">,</span> <span class="n">config_path</span><span class="p">)</span></div>
+    
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../import_hub_main.html#import_hub_main.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Main function for the streamlit app&quot;&quot;&quot;</span>
+    <span class="c1"># Load the config</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="n">CONFIG_FILE</span><span class="p">)</span>
+    <span class="n">config_path</span> <span class="o">=</span> <span class="n">CONFIG_FILE</span>
+
+
+    <span class="n">st</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;W4H Import Hub&quot;</span><span class="p">)</span>
+
+    <span class="n">selected_db</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># Choose between existing or new database</span>
+    <span class="n">db_selection_options</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Choose existing W4H database instance&quot;</span><span class="p">,</span> <span class="s2">&quot;Create new W4H database instance&quot;</span><span class="p">]</span>
+    <span class="n">database_option</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">radio</span><span class="p">(</span>
+        <span class="s2">&quot;Select an option&quot;</span><span class="p">,</span>
+        <span class="n">db_selection_options</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Handling the chosen option</span>
+    <span class="k">if</span> <span class="n">database_option</span> <span class="o">==</span> <span class="n">db_selection_options</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="c1"># `get_existing_databases()` retrieves the list of existing databases.</span>
+        <span class="n">existing_databases</span> <span class="o">=</span> <span class="n">get_existing_databases</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span>  <span class="c1"># This function needs to be implemented.</span>
+        
+        <span class="n">selected_db</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">selectbox</span><span class="p">(</span><span class="s2">&quot;**Select an existing database**&quot;</span><span class="p">,</span> <span class="n">existing_databases</span><span class="p">)</span>
+        
+            
+    <span class="k">elif</span> <span class="n">database_option</span> <span class="o">==</span> <span class="n">db_selection_options</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">new_db_name</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">text_input</span><span class="p">(</span><span class="s2">&quot;Enter new w4h database instance name&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">st</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="s2">&quot;Create&quot;</span><span class="p">):</span>
+            <span class="c1"># Here, implement logic to create the new database with the name new_db_name.</span>
+            <span class="n">create_w4h_instance</span><span class="p">(</span><span class="n">new_db_name</span><span class="p">,</span> <span class="n">config_path</span><span class="p">)</span>  <span class="c1"># This function needs to be implemented.</span>
+            <span class="n">st</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Database &#39;</span><span class="si">{</span><span class="n">new_db_name</span><span class="si">}</span><span class="s2">&#39; created!&quot;</span><span class="p">)</span>
+            <span class="n">selected_db</span> <span class="o">=</span> <span class="n">new_db_name</span>
+            
+
+    <span class="n">uploaded_file</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">file_uploader</span><span class="p">(</span><span class="s2">&quot;Choose a CSV file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;csv&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">uploaded_file</span><span class="p">:</span>
+        <span class="n">st</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="s2">&quot;File uploaded!&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">uploaded_file</span><span class="p">)</span>
+        <span class="n">st</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Columns in your CSV:&quot;</span><span class="p">)</span>
+        <span class="n">st</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+
+        <span class="c1"># Map columns</span>
+        <span class="n">st</span><span class="o">.</span><span class="n">subheader</span><span class="p">(</span><span class="s2">&quot;Mapping&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Default selections based on column name similarity</span>
+        <span class="n">default_timestamp</span> <span class="o">=</span> <span class="n">find_closest_name</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="s1">&#39;time timestamp date start_time end_time&#39;</span><span class="p">)</span>
+        <span class="n">default_user_id</span> <span class="o">=</span> <span class="n">find_closest_name</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="s1">&#39;user id email&#39;</span><span class="p">)</span>
+
+        <span class="n">timestamp_col</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">selectbox</span><span class="p">(</span><span class="s2">&quot;**Select Timestamp Column**&quot;</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="n">default_timestamp</span><span class="p">))</span>
+        <span class="n">user_id_col</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">selectbox</span><span class="p">(</span><span class="s2">&quot;**Select User ID Column**&quot;</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="n">default_user_id</span><span class="p">))</span>
+
+        <span class="c1"># Foldable block for optional mappings</span>
+        <span class="n">mappings</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">config</span><span class="p">[</span><span class="s1">&#39;mapping&#39;</span><span class="p">][</span><span class="s1">&#39;columns&#39;</span><span class="p">][</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]:</span> <span class="n">timestamp_col</span><span class="p">,</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">][</span><span class="s1">&#39;columns&#39;</span><span class="p">][</span><span class="s1">&#39;user_id&#39;</span><span class="p">]:</span> <span class="n">user_id_col</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">table_mappings</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">with</span> <span class="n">st</span><span class="o">.</span><span class="n">expander</span><span class="p">(</span><span class="s2">&quot;**Map Features to W4H Tables**&quot;</span><span class="p">,</span> <span class="n">expanded</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="n">st</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Map your CSV columns to corresponding W4H tables.&quot;</span><span class="p">)</span>
+            
+            <span class="n">choices</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;None&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">target_table_name</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;mapping&#39;</span><span class="p">][</span><span class="s1">&#39;tables&#39;</span><span class="p">][</span><span class="s1">&#39;time_series&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;mapping&#39;</span><span class="p">][</span><span class="s1">&#39;tables&#39;</span><span class="p">][</span><span class="s1">&#39;geo&#39;</span><span class="p">]:</span>
+                <span class="n">target_table_label</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">label</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">target_table_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()])</span>
+                <span class="n">st</span><span class="o">.</span><span class="n">subheader</span><span class="p">(</span><span class="n">target_table_label</span><span class="p">)</span>
+                <span class="n">def_choice</span> <span class="o">=</span> <span class="n">find_closest_name</span><span class="p">(</span><span class="n">choices</span><span class="p">,</span> <span class="n">target_table_label</span><span class="p">)</span>
+                <span class="n">mapped_col</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">selectbox</span><span class="p">(</span><span class="s2">&quot;Select Corresponding Column&quot;</span><span class="p">,</span> <span class="n">choices</span><span class="p">,</span> 
+                                        <span class="n">key</span><span class="o">=</span><span class="n">target_table_name</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">choices</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">def_choice</span><span class="p">))</span>
+                <span class="n">table_mappings</span><span class="p">[</span><span class="n">target_table_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapped_col</span> <span class="k">if</span> <span class="n">mapped_col</span> <span class="o">!=</span> <span class="s2">&quot;None&quot;</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="c1"># Once mappings are set, allow the user to populate the database</span>
+        <span class="k">if</span> <span class="n">st</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="s2">&quot;Populate Database&quot;</span><span class="p">):</span>
+            <span class="n">mappings</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">mappings</span><span class="p">,</span> <span class="o">**</span><span class="n">table_mappings</span><span class="p">}</span>
+
+            <span class="n">populate_db</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">selected_db</span><span class="p">,</span> <span class="n">mappings</span><span class="p">,</span> <span class="n">config_path</span><span class="p">)</span>
+            <span class="n">st</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="s2">&quot;Database populated!&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Arash Hajisafi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
