@@ -14,7 +14,7 @@ W4H ImportHub is your gateway to seamlessly merging your stored datasets (e.g., 
 
 ## Documentation
 
-Dive deep into the heart of W4H ImportHub and understand its nuances by visiting the [W4H ImportHub Documentation](www.google.com).
+Dive deep into the heart of W4H ImportHub and understand its nuances by visiting the [W4H ImportHub Documentation](https://usc-infolab.github.io/W4H-ImportHub/).
 
 
 ## Features
