@@ -55,9 +55,9 @@ Before you embark on your journey with W4H ImportHub, please ensure:
 1. **Setup Configuration:** Before diving into the import process, ensure your environment is set up correctly (see [Installation](#installation)). Copy the `config.yaml.example` to `config.yaml`. Within this configuration file, input your database connection details. You can either leverage our default recommended platform configuration or customize it to better match your specific requirements.
 
 2. **Launch the Streamlit app:** Run the W4H ImportHub Streamlit dashboard:
-```bash
-streamlit run import_hub_main.py
-```
+    ```bash
+    streamlit run import_hub_main.py
+    ```
 This will provide an address which you can use to access the UI in your web browser.
 
 3. **Database Instance Decision:** Once on the UI, you'll have the option to either populate an existing W4H database instance or initiate a new one.
