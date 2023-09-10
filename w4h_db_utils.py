@@ -35,12 +35,13 @@ def create_tables(db_name, config_file='config.yaml'):
     # Create geo table
     for table_name in config["mapping"]["tables"]["geo"]:
         table = Table(table_name, metadata,
-            Column(columns_config["user_id"], ForeignKey(user_table_config["name"] + '.' + columns_config["user_id"])),
+            Column(columns_config["user_id"], ForeignKey(user_table_config["name"] + '.' + columns_config["user_id"]), primary_key=True),
             Column(columns_config["timestamp"], DateTime, primary_key=True),
             Column(columns_config["value"], Geometry('POINT'))
         )
     
     metadata.create_all(db_engine)
+    db_engine.dispose()
     
         
         
@@ -51,14 +52,17 @@ def create_w4h_instance(db_name, config_file='config.yaml'):
     if not database_exists(f'{db_engine_tmp.url}{db_name}'):
         create_database(f'{db_engine_tmp.url}{db_name}')
         logger.success(f"Database {db_name} created!")
+        db_engine_tmp.dispose()
     else:
         logger.error(f"Database {db_name} already exists!")
+        db_engine_tmp.dispose()
         return
     db_engine = get_db_engine(config_file, db_name=db_name)
     with db_engine.connect() as connection:
         connection.execute(text(f"CREATE EXTENSION postgis;"))
         logger.success(f"PostGIS extension enabled for {db_name}!")
         connection.commit()
+    db_engine.dispose()
     create_tables(config_file=config_file, db_name=db_name)
     logger.success(f"W4H tables initialized!")
     
@@ -69,6 +73,7 @@ def get_existing_databases(config_file='config.yaml'):
     with db_engine.connect() as connection:
         result = connection.execute(text("SELECT datname FROM pg_database WHERE datistemplate = false;"))
         databases = [row[0] for row in result]
+    db_engine.dispose()
     return databases
 
 
@@ -88,7 +93,7 @@ def populate_tables(df, db_name, mappings, config_path='config.yaml'):
     session = Session()
     
     # Ensure all unique users from the dataframe exist in the user table
-    unique_users = df[mappings[default_user_id]].unique()
+    unique_users = df[mappings[default_user_id]].unique().astype(str)
     existing_users = session.query(Table(user_table_name, MetaData(bind=engine), autoload=True).c[default_user_id]).all()
     existing_users = [x[0] for x in existing_users]
 
@@ -118,8 +123,13 @@ def populate_tables(df, db_name, mappings, config_path='config.yaml'):
             # Rename columns to match the table's column names using the defaults from config
             subset_df.columns = [default_user_id, default_timestamp, default_value]
             
-            # Averaging values for duplicate user_id and timestamp pairs
-            subset_df = subset_df.groupby([default_user_id, default_timestamp]).mean().reset_index()
+            # dropping duplicate user_id and timestamp
+            subset_df.drop_duplicates(subset=[default_user_id, default_timestamp], inplace=True)
+            # subset_df = subset_df.groupby([default_user_id, default_timestamp]).mean().reset_index()
+            
+            # handling geometry data
+            if table_name in config["mapping"]["tables"]["geo"]:
+                subset_df[default_value] = subset_df[default_value].apply(lambda x: f'POINT{x}'.replace(',', ''))
             
             # Insert data into the table
             subset_df.to_sql(table_name, engine, if_exists='append', index=False)
@@ -127,6 +137,7 @@ def populate_tables(df, db_name, mappings, config_path='config.yaml'):
     # Commit the remaining changes and close the session
     session.commit()
     session.close()
+    engine.dispose()
 
         
         
