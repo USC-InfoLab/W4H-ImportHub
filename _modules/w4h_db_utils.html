@@ -241,6 +241,29 @@
     <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
     <span class="n">session</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
     <span class="n">engine</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="populate_subject_table"><a class="viewcode-back" href="../w4h_db_utils.html#w4h_db_utils.populate_subject_table">[docs]</a><span class="k">def</span> <span class="nf">populate_subject_table</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">db_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config_path</span><span class="o">=</span><span class="s1">&#39;config.yaml&#39;</span><span class="p">,</span> <span class="n">user_tbl_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Populate the W4H subject table in the given database with the data from the given dataframe based on</span>
+<span class="sd">    the given subject table name in the config file.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df (pd.DataFrame): Dataframe containing the subject data to be inserted into the database</span>
+<span class="sd">        db_name (str): Name of the subject database to insert the data into</span>
+<span class="sd">        config_path (str, optional): Path to the config file. Defaults to &#39;config.yaml&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Load the config</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span>
+
+    <span class="c1"># Create a session</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">get_db_engine</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="n">db_name</span><span class="o">=</span><span class="n">db_name</span><span class="p">)</span>
+
+    <span class="c1"># populate the user table (directly push df to table), if already exists, append new users</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">user_tbl_name</span><span class="p">,</span> <span class="n">engine</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Commit the remaining changes and close the session</span>
+    <span class="n">engine</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span></div>
+
 </pre></div>
 
            </div>
