@@ -169,3 +169,26 @@ def populate_tables(df: pd.DataFrame, db_name: str, mappings: dict, config_path=
     session.commit()
     session.close()
     engine.dispose()
+
+
+def populate_subject_table(df: pd.DataFrame, db_name: str, config_path='config.yaml', user_tbl_name=None):
+    """Populate the W4H subject table in the given database with the data from the given dataframe based on
+    the given subject table name in the config file.
+
+    Args:
+        df (pd.DataFrame): Dataframe containing the subject data to be inserted into the database
+        db_name (str): Name of the subject database to insert the data into
+        config_path (str, optional): Path to the config file. Defaults to 'config.yaml'.
+    """
+    # Load the config
+    config = load_config(config_path)
+
+    # Create a session
+    engine = get_db_engine(config_path, db_name=db_name)
+
+    # populate the user table (directly push df to table), if already exists, append new users
+    df.to_sql(user_tbl_name, engine, if_exists='replace', index=False)
+
+    # Commit the remaining changes and close the session
+    engine.dispose()
+

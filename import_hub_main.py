@@ -6,7 +6,7 @@ from fuzzywuzzy import process
 
 from utils import load_config
 
-from w4h_db_utils import create_w4h_instance, get_existing_databases, populate_tables
+from w4h_db_utils import create_w4h_instance, get_existing_databases, populate_tables, populate_subject_table
 
 
 CONFIG_FILE = 'config.yaml'
@@ -106,8 +106,24 @@ def main():
             
 
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    
+    # option to populate subject table or feature time series tables
+    is_subjects_populated = st.checkbox("Populate subject table?")
 
-    if uploaded_file:
+    if uploaded_file and is_subjects_populated:
+        # set subject table name
+        subject_tbl_name = st.text_input("Enter subject table name", value="subjects")
+        st.success("File uploaded!")
+        df = pd.read_csv(uploaded_file)
+        st.write("Columns in your CSV:")
+        st.write(df.columns)
+
+        if st.button("Populate Database"):
+            populate_subject_table(df, selected_db, config_path, user_tbl_name=subject_tbl_name)
+            st.success("Database populated!")
+
+
+    if uploaded_file and not is_subjects_populated:
         st.success("File uploaded!")
         df = pd.read_csv(uploaded_file)
         st.write("Columns in your CSV:")
