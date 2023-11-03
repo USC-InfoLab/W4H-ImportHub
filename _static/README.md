@@ -1,6 +1,6 @@
 # W4H ImportHub: Effortlessly Bridging Your Data to the W4H Ecosystem
 
-W4H ImportHub is your gateway to seamlessly merging your stored datasets (e.g., CSV files) with the expansive world of our innovative W4H platform. Crafted with a user-centric interface, this hub goes beyond mere data import; it intelligently foresees your mapping requirements, weaving the nuanced threads of your datasets into the fabric of the W4H ecosystem with grace and precision. Experience not just an import, but a harmonious fusion of data realms by linking your data world to our expanding W4H platform.
+W4H ImportHub is designed to integrate offline datasets, like CSV files, into the W4H platform, aligning with the GeoMTS schema and data structures. It aids in the smooth import of data while offering automatic attribute mapping to ensure data consistency and integration with the structure and standards of the  W4H platform.
 
 ## Table of Contents
 
